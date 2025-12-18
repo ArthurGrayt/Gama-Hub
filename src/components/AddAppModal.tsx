@@ -7,6 +7,7 @@ interface AddAppModalProps {
     onClose: () => void;
     onSave: (app: any) => void;
     initialData?: any | null; // Optional prop for editing
+    userRole?: number;
 }
 
 const iconOptions = [
@@ -34,12 +35,14 @@ const cardColorOptions = [
     { name: 'bg-pink-50', label: 'Rosa Suave', class: 'bg-pink-50' },
 ];
 
-const AddAppModal: React.FC<AddAppModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
+const AddAppModal: React.FC<AddAppModalProps> = ({ isOpen, onClose, onSave, initialData, userRole = 0 }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [selectedIcon, setSelectedIcon] = useState('Bot');
     const [selectedCardColor, setSelectedCardColor] = useState('bg-white');
     const [url, setUrl] = useState('');
+    const [minRole, setMinRole] = useState(0);
+
     const [file, setFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -51,6 +54,7 @@ const AddAppModal: React.FC<AddAppModalProps> = ({ isOpen, onClose, onSave, init
             setDescription(initialData.description || '');
             setSelectedCardColor(initialData.cardColor || 'bg-white');
             setUrl(initialData.url || '');
+            setMinRole(initialData.minRole || 0);
 
             // Check if icon is a URL (custom upload) vs internal name
             if (initialData.iconName && initialData.iconName.startsWith('http')) {
@@ -68,7 +72,10 @@ const AddAppModal: React.FC<AddAppModalProps> = ({ isOpen, onClose, onSave, init
             setSelectedIcon('Bot');
             setSelectedCardColor('bg-white');
             setUrl('');
+            setMinRole(0);
+
             setFile(null);
+            setPreviewUrl(null);
             setPreviewUrl(null);
         }
     }, [initialData, isOpen]);
@@ -78,10 +85,6 @@ const AddAppModal: React.FC<AddAppModalProps> = ({ isOpen, onClose, onSave, init
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // If current icon is 'upload' but we have a preview URL and NO new file,
-        // it means we keep the existing image URL.
-        // If we have a new file, we pass it to be uploaded.
-
         onSave({
             id: initialData?.id, // Pass ID back if editing
             title,
@@ -90,6 +93,7 @@ const AddAppModal: React.FC<AddAppModalProps> = ({ isOpen, onClose, onSave, init
             statusColor: 'green',
             cardColor: selectedCardColor,
             url: url || undefined,
+            minRole: minRole,
             file: file, // Pass the file object
             existingIconUrl: (selectedIcon === 'upload' && !file) ? previewUrl : undefined
         });
@@ -124,10 +128,10 @@ const AddAppModal: React.FC<AddAppModalProps> = ({ isOpen, onClose, onSave, init
             />
 
             {/* Modal Content */}
-            <div className="relative w-full max-w-lg bg-white/80 backdrop-blur-3xl rounded-[32px] shadow-2xl border border-white/50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="relative w-full max-w-lg bg-white/80 backdrop-blur-3xl rounded-[32px] shadow-2xl border border-white/50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
 
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-200/50">
+                <div className="flex items-center justify-between p-6 border-b border-gray-200/50 flex-shrink-0">
                     <h2 className="text-xl font-semibold text-gray-900">
                         {initialData ? 'Editar App' : 'Adicionar Novo App'}
                     </h2>
@@ -139,125 +143,148 @@ const AddAppModal: React.FC<AddAppModalProps> = ({ isOpen, onClose, onSave, init
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                    {/* Title Input */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Nome do App</label>
-                        <input
-                            type="text"
-                            required
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            placeholder="Ex: Novo Sistema"
-                            className="w-full px-4 py-3 rounded-xl bg-white/50 border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
-                        />
-                    </div>
-
-                    {/* Description Input */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Descrição</label>
-                        <textarea
-                            required
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Breve descrição da funcionalidade..."
-                            rows={3}
-                            className="w-full px-4 py-3 rounded-xl bg-white/50 border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all resize-none"
-                        />
-                    </div>
-
-                    {/* Icon Selection */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Ícone</label>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            accept="image/*"
-                            className="hidden"
-                        />
-                        <div className="grid grid-cols-6 gap-2">
-                            {iconOptions.map((opt) => (
-                                <div key={opt.name} className="relative group">
-                                    <button
-                                        type="button"
-                                        onClick={() => handleIconSelect(opt.name)}
-                                        className={`w-full aspect-square rounded-xl flex items-center justify-center transition-all relative overflow-hidden ${selectedIcon === opt.name
-                                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20 scale-105'
-                                            : 'bg-white/50 hover:bg-white text-gray-500 hover:scale-105'
-                                            }`}
-                                    >
-                                        {/* Render Preview for Upload option if available */}
-                                        {opt.name === 'upload' && previewUrl ? (
-                                            <img src={previewUrl} alt="Upload preview" className="w-full h-full object-cover" />
-                                        ) : (
-                                            opt.icon
-                                        )}
-                                    </button>
-
-                                    {/* Tooltip for special options */}
-                                    {opt.label && (
-                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                                            {opt.label}
-                                            {/* Little arrow */}
-                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
+                <div className="overflow-y-auto custom-scrollbar">
+                    <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                        {/* Title Input */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Nome do App</label>
+                            <input
+                                type="text"
+                                required
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                placeholder="Ex: Novo Sistema"
+                                className="w-full px-4 py-3 rounded-xl bg-white/50 border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                            />
                         </div>
-                    </div>
 
-                    {/* Card Color Selection */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Cor do Card</label>
-                        <div className="grid grid-cols-3 gap-3">
-                            {cardColorOptions.map((opt) => (
-                                <button
-                                    key={opt.name}
-                                    type="button"
-                                    onClick={() => setSelectedCardColor(opt.name)}
-                                    className={`py-3 rounded-xl flex items-center justify-center gap-2 transition-all border ${selectedCardColor === opt.name
+                        {/* Description Input */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Descrição</label>
+                            <textarea
+                                required
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="Breve descrição da funcionalidade..."
+                                rows={3}
+                                className="w-full px-4 py-3 rounded-xl bg-white/50 border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all resize-none"
+                            />
+                        </div>
+
+
+                        {/* Role Selection - ONLY ADMINS */}
+                        {userRole >= 6 && (
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">Permissão Mínima (Role)</label>
+                                <div className="flex items-center gap-3 bg-amber-50 p-3 rounded-xl border border-amber-100">
+                                    <Shield size={20} className="text-amber-500" />
+                                    <div className="flex-1">
+                                        <p className="text-xs text-amber-700">Somente usuários com nível igual ou superior poderão ver este app.</p>
+                                    </div>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={minRole}
+                                        onChange={(e) => setMinRole(parseInt(e.target.value) || 0)}
+                                        className="w-20 px-3 py-2 rounded-lg bg-white border border-gray-200 focus:border-amber-500 outline-none text-center font-medium"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Icon Selection */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Ícone</label>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
+                                accept="image/*"
+                                className="hidden"
+                            />
+                            <div className="grid grid-cols-6 gap-2">
+                                {iconOptions.map((opt) => (
+                                    <div key={opt.name} className="relative group">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleIconSelect(opt.name)}
+                                            className={`w-full aspect-square rounded-xl flex items-center justify-center transition-all relative overflow-hidden ${selectedIcon === opt.name
+                                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20 scale-105'
+                                                : 'bg-white/50 hover:bg-white text-gray-500 hover:scale-105'
+                                                }`}
+                                        >
+                                            {/* Render Preview for Upload option if available */}
+                                            {opt.name === 'upload' && previewUrl ? (
+                                                <img src={previewUrl} alt="Upload preview" className="w-full h-full object-cover" />
+                                            ) : (
+                                                opt.icon
+                                            )}
+                                        </button>
+
+                                        {/* Tooltip for special options */}
+                                        {opt.label && (
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                                                {opt.label}
+                                                {/* Little arrow */}
+                                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Card Color Selection */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Cor do Card</label>
+                            <div className="grid grid-cols-3 gap-3">
+                                {cardColorOptions.map((opt) => (
+                                    <button
+                                        key={opt.name}
+                                        type="button"
+                                        onClick={() => setSelectedCardColor(opt.name)}
+                                        className={`py-3 rounded-xl flex items-center justify-center gap-2 transition-all border ${selectedCardColor === opt.name
                                             ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-md transform scale-[1.02]'
                                             : 'border-gray-100 hover:border-gray-200'
-                                        } ${opt.class}`}
-                                >
-                                    <span className={`text-sm font-medium ${opt.name === 'bg-gray-900' ? 'text-white' : 'text-gray-700'}`}>{opt.label}</span>
-                                </button>
-                            ))}
+                                            } ${opt.class}`}
+                                    >
+                                        <span className={`text-sm font-medium ${opt.name === 'bg-gray-900' ? 'text-white' : 'text-gray-700'}`}>{opt.label}</span>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    </div>
 
-                    {/* URL Input */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">URL do App</label>
-                        <input
-                            type="text"
-                            value={url}
-                            onChange={(e) => setUrl(e.target.value)}
-                            placeholder="Ex: https://dominio.com/app"
-                            className="w-full px-4 py-3 rounded-xl bg-white/50 border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
-                        />
-                    </div>
+                        {/* URL Input */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">URL do App</label>
+                            <input
+                                type="text"
+                                value={url}
+                                onChange={(e) => setUrl(e.target.value)}
+                                placeholder="Ex: https://dominio.com/app"
+                                className="w-full px-4 py-3 rounded-xl bg-white/50 border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                            />
+                        </div>
 
-                    {/* Actions */}
-                    <div className="pt-2 flex gap-3">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex-1 py-3 rounded-xl text-gray-700 font-medium hover:bg-black/5 transition-colors"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            className="flex-1 py-3 rounded-xl bg-gray-900 text-white font-medium hover:bg-gray-800 transition-colors shadow-lg shadow-gray-900/10 flex items-center justify-center gap-2"
-                        >
-                            <Check size={18} />
-                            {initialData ? 'Salvar Alterações' : 'Adicionar App'}
-                        </button>
-                    </div>
-                </form>
+                        {/* Actions */}
+                        <div className="pt-2 flex gap-3">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex-1 py-3 rounded-xl text-gray-700 font-medium hover:bg-black/5 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                className="flex-1 py-3 rounded-xl bg-gray-900 text-white font-medium hover:bg-gray-800 transition-colors shadow-lg shadow-gray-900/10 flex items-center justify-center gap-2"
+                            >
+                                <Check size={18} />
+                                {initialData ? 'Salvar Alterações' : 'Adicionar App'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     );

@@ -14,4 +14,11 @@ export interface GamaHubApp {
     cor: string;
     url_app: string;
     created_at?: string;
+    min_role?: number; // Minimum role required to view the app
+}
+
+export interface UserDashboard {
+    user_id: string; // Foreign Key to auth.users (or public.users)
+    apps_visiveis: number[]; // Array of App IDs in display order
+    created_at?: string;
 }
