@@ -489,7 +489,7 @@ function App() {
         <div className="flex items-center gap-5">
           {/* Brand Logo */}
           <div className="bg-white/80 backdrop-blur-xl p-3 rounded-[20px] shadow-sm border border-white/60">
-            <img src="/src/assets/logo.png" alt="Gama Hub Logo" className="w-12 h-12 object-contain" />
+            <img src="/logo.png" alt="Gama Hub Logo" className="w-12 h-12 object-contain" />
           </div>
 
           <h1 className="text-3xl md:text-4xl font-semibold text-gray-900 tracking-tight leading-snug">
