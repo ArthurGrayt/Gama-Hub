@@ -492,8 +492,8 @@ function App() {
             <img src="/logo.png" alt="Gama Hub Logo" className="w-12 h-12 object-contain" />
           </div>
 
-          <h1 className="text-3xl md:text-4xl font-semibold text-gray-900 tracking-tight leading-snug">
-            Gama Hub <span className="text-gray-400 font-light mx-2">–</span> <span className="text-gray-700">Central de recursos Gama Center</span>
+          <h1 className="text-2xl md:text-3xl xl:text-4xl font-semibold text-gray-900 tracking-tight leading-snug">
+            Gama Hub <span className="text-gray-400 font-light mx-2 hidden sm:inline">–</span> <span className="text-gray-700 block sm:inline text-lg md:text-xl xl:text-2xl mt-1 sm:mt-0">Central de recursos Gama Center</span>
           </h1>
         </div>
 
@@ -541,9 +541,9 @@ function App() {
       </div>
 
       {/* Main Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_3fr] gap-8 min-h-[600px]">
-        {/* Left Column: Notice Panel */}
-        <div className="lg:col-span-1 self-start lg:h-[520px] min-h-[400px]">
+      <div className="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-8 min-h-[600px]">
+        {/* Left Column: Notice Panel - Stacked on top for mobile/tablet/laptop, Side on XL+ */}
+        <div className="xl:col-span-1 self-start xl:h-[520px] min-h-[auto]">
           <NoticeCard />
         </div>
 
@@ -568,7 +568,7 @@ function App() {
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-fr overflow-y-auto max-h-[65vh] p-2 pb-6 no-scrollbar">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3 gap-6 auto-rows-fr overflow-y-auto max-h-[65vh] p-2 pb-6 no-scrollbar">
 
               {/* Loading State */}
               {isLoading && (
