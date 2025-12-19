@@ -40,7 +40,7 @@ export default function LoginPage() {
                 <div className="bg-white/70 backdrop-blur-xl rounded-[32px] shadow-2xl border border-white/50 p-8 md:p-10">
                     <div className="text-center mb-8">
                         <div className="inline-flex justify-center items-center p-4 bg-white/80 rounded-[24px] shadow-sm mb-6">
-                            <img src="/src/assets/logo.png" alt="Logo" className="w-12 h-12 object-contain" />
+                            <img src="/logo.png" alt="Logo" className="w-12 h-12 object-contain" />
                         </div>
                         <h1 className="text-2xl font-bold text-gray-900 mb-2">Bem-vindo de volta</h1>
                         <p className="text-gray-500">Acesse o Gama Hub para gerenciar seus apps</p>
