@@ -546,7 +546,7 @@ function App() {
       {/* Main Grid Layout */}
       <div className="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-8 min-h-[600px]">
         {/* Left Column: Notice Panel - Stacked on top for mobile/tablet/laptop, Side on XL+ */}
-        <div className="xl:col-span-1 self-start min-h-[auto]">
+        <div className="hidden md:block xl:col-span-1 self-start min-h-[auto]">
           <NoticeCard />
         </div>
 
