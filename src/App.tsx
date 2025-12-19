@@ -106,7 +106,7 @@ function App() {
     // 1. Fetch User Profile
     await fetchUserProfile(userId);
     // 2. Fetch Apps
-    await fetchApps();
+    await fetchApps(userId);
     setIsLoading(false);
   };
 
@@ -156,7 +156,7 @@ function App() {
     }
   };
 
-  const fetchApps = async () => {
+  const fetchApps = async (userId?: string) => {
     try {
       // 1. Fetch Apps
       const { data: appsData, error: appsError } = await supabase
@@ -168,15 +168,25 @@ function App() {
 
       // 2. Fetch User Layout
       let layoutMap = new Map<number, UserAppLayout>();
-      if (session?.user?.id) {
-        const { data: layoutData } = await supabase
+      const layoutUserId = userId || session?.user?.id;
+
+      if (layoutUserId) {
+        console.log("Fetching layout for user:", layoutUserId);
+        const { data: layoutData, error: layoutError } = await supabase
           .from('user_app_layout')
           .select('*')
-          .eq('user_id', session.user.id);
+          .eq('user_id', layoutUserId);
+
+        if (layoutError) console.error("Error fetching layout:", layoutError);
 
         if (layoutData) {
+          console.log("Layout data found:", layoutData.length, "items");
           layoutData.forEach((l: UserAppLayout) => layoutMap.set(l.app_id, l));
+        } else {
+          console.log("No layout data found for user.");
         }
+      } else {
+        console.warn("No user ID available for layout fetch");
       }
 
       // Calculate max position for new items
