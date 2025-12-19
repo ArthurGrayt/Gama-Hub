@@ -10,9 +10,11 @@ interface SortableAppCardProps {
     onEdit: (app: any) => void;
     onDelete: (id: number) => void;
     iconNode: React.ReactNode;
+    fixed?: boolean;
+    onToggleFixed?: () => void;
 }
 
-export function SortableAppCard({ id, app, isEditMode, onEdit, onDelete, iconNode }: SortableAppCardProps) {
+export function SortableAppCard({ id, app, isEditMode, onEdit, onDelete, iconNode, fixed, onToggleFixed }: SortableAppCardProps) {
     // Only Sortable if NOT in edit mode. But requirements say "click and hold".
     // For now we enable drag always, or only when not editing?
     // "fora do modo de edição ... reorganizar" -> So disabled when isEditMode=true
@@ -53,6 +55,8 @@ export function SortableAppCard({ id, app, isEditMode, onEdit, onDelete, iconNod
                 isEditMode={isEditMode}
                 onEdit={() => onEdit(app)}
                 onDelete={() => onDelete(app.id)}
+                fixed={fixed}
+                onToggleFixed={onToggleFixed}
             />
         </div>
     );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Star } from 'lucide-react';
 
 interface AppCardProps {
     title: string;
@@ -11,6 +11,8 @@ interface AppCardProps {
     isEditMode?: boolean;
     onEdit?: () => void;
     onDelete?: () => void;
+    fixed?: boolean;
+    onToggleFixed?: () => void;
 }
 
 const AppCard: React.FC<AppCardProps> = ({
@@ -21,8 +23,10 @@ const AppCard: React.FC<AppCardProps> = ({
     cardColor = 'bg-white',
     url,
     isEditMode = false,
+    fixed = false,
     onEdit,
-    onDelete
+    onDelete,
+    onToggleFixed
 }) => {
 
     const statusMap = {
@@ -38,11 +42,29 @@ const AppCard: React.FC<AppCardProps> = ({
         }
     };
 
+    const handleToggleFixed = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onToggleFixed?.();
+    };
+
     return (
         <div
             onClick={handleCardClick}
             className={`${cardColor} rounded-[24px] p-8 flex flex-col h-full min-h-[240px] shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 relative group border border-transparent hover:border-blue-100 overflow-hidden cursor-pointer`}
         >
+            {/* Star / Fix Button - Visible on Hover or if Fixed */}
+            {!isEditMode && (
+                <button
+                    onClick={handleToggleFixed}
+                    className={`absolute bottom-4 right-4 z-20 p-2 rounded-full transition-all duration-200 ${fixed
+                        ? 'bg-yellow-100 text-yellow-500 opacity-100'
+                        : 'bg-white/50 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-white hover:text-yellow-500'
+                        }`}
+                    title={fixed ? "Desafixar" : "Fixar"}
+                >
+                    <Star size={18} fill={fixed ? "currentColor" : "none"} strokeWidth={fixed ? 0 : 2} />
+                </button>
+            )}
 
             {/* Edit Mode Overlays */}
             {isEditMode && (

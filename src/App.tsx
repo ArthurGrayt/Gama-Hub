@@ -25,7 +25,7 @@ import AddAppModal from './components/AddAppModal';
 import LoginPage from './components/LoginPage';
 import { Bot, Mail, Shield, Cloud, Layout, FileText, Search, Plus, Pencil, Calendar, Database, Globe, Lock, MessageCircle, Monitor, LogOut } from 'lucide-react';
 import { supabase } from './services/supabase';
-import type { GamaHubApp } from './services/supabase';
+import type { GamaHubApp, UserAppLayout } from './services/supabase';
 import type { Session } from '@supabase/supabase-js';
 
 // Define the App data structure used in the UI
@@ -37,7 +37,10 @@ interface AppData {
   statusColor: 'green' | 'blue' | 'yellow' | 'gray';
   cardColor?: string;
   url?: string;
+
   users_acessers?: string[];
+  fixed?: boolean;
+  position?: number;
 }
 
 // Icon mapping registry
@@ -75,6 +78,7 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingApp, setEditingApp] = useState<AppData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const [activeId, setActiveId] = useState<number | null>(null); // For DragOverlay
 
   // Configure sensors for DnD
@@ -154,32 +158,113 @@ function App() {
 
   const fetchApps = async () => {
     try {
+      // 1. Fetch Apps
       const { data: appsData, error: appsError } = await supabase
         .from('gamahub_apps')
         .select('*')
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true }); // Default DB sort
 
       if (appsError) throw appsError;
 
+      // 2. Fetch User Layout
+      let layoutMap = new Map<number, UserAppLayout>();
+      if (session?.user?.id) {
+        const { data: layoutData } = await supabase
+          .from('user_app_layout')
+          .select('*')
+          .eq('user_id', session.user.id);
+
+        if (layoutData) {
+          layoutData.forEach((l: UserAppLayout) => layoutMap.set(l.app_id, l));
+        }
+      }
+
+      // Calculate max position for new items
+      let maxPosition = 0;
+      layoutMap.forEach(l => {
+        if (l.position > maxPosition) maxPosition = l.position;
+      });
+
       let mappedApps: AppData[] = [];
       if (appsData) {
-        mappedApps = appsData.map((item: GamaHubApp) => ({
-          id: item.id!,
-          title: item.nome,
-          description: item.descricao,
-          iconName: item.icone,
-          statusColor: 'green',
-          cardColor: item.cor,
+        mappedApps = appsData.map((item: GamaHubApp) => {
+          let layout = layoutMap.get(item.id!);
+          // If no layout, assign next position
+          if (!layout) {
+            // Temporary assignment for sorting in checking, 
+            // Real persistence happens on interaction
+            maxPosition++;
+          }
 
-          url: item.url_app,
-          users_acessers: item.users_acessers || []
-        }));
+          return {
+            id: item.id!,
+            title: item.nome,
+            description: item.descricao,
+            iconName: item.icone,
+            statusColor: 'green' as const,
+            cardColor: item.cor,
+            url: item.url_app,
+            users_acessers: item.users_acessers || [],
+            // Apply layout or defaults
+            fixed: layout ? layout.fixed : false,
+            position: layout ? layout.position : maxPosition
+          };
+        });
       }
+
+      // Sort: Fixed first, then by Position
+      mappedApps.sort((a, b) => {
+        if (a.fixed && !b.fixed) return -1;
+        if (!a.fixed && b.fixed) return 1;
+        return (a.position || 0) - (b.position || 0);
+      });
 
       setApps(mappedApps);
 
     } catch (error) {
       console.error('Error in fetchApps:', error);
+    }
+  };
+
+  // Toggle Fixed Status (Star)
+  const toggleAppFixed = async (appId: number, currentFixed: boolean) => {
+    if (!session) return;
+    const newFixed = !currentFixed;
+
+    // Optimistic Update
+    setApps(prevApps => {
+      const updated = prevApps.map(app =>
+        app.id === appId ? { ...app, fixed: newFixed } : app
+      );
+      // Re-sort
+      updated.sort((a, b) => {
+        if (a.fixed && !b.fixed) return -1;
+        if (!a.fixed && b.fixed) return 1;
+        return (a.position || 0) - (b.position || 0);
+      });
+      return updated;
+    });
+
+    // Persist
+    try {
+      const app = apps.find(a => a.id === appId);
+      // We need the current position, or calculate one if missing?
+      // Actually, if we just toggle fixed, position stays same relative to others (logic handled by sort)
+      // But we need to save to DB.
+
+      const { error } = await supabase
+        .from('user_app_layout')
+        .upsert({
+          user_id: session.user.id,
+          app_id: appId,
+          fixed: newFixed,
+          position: app?.position || 9999 // Fallback
+        }, { onConflict: 'user_id, app_id' });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error toggling fixed:", error);
+      // Revert? For now, just log.
     }
   };
 
@@ -189,18 +274,46 @@ function App() {
     setActiveId(event.active.id);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     setActiveId(null);
     const { active, over } = event;
 
-    if (active.id !== over?.id) {
+    if (!over) return;
+
+    if (active.id !== over.id) {
       setApps((items) => {
         const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over?.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
         const newOrder = arrayMove(items, oldIndex, newIndex);
 
-        // Save to backend - DISABLED (Removed user_dashboard)
-        // saveUserDashboard(newOrder);
+        // Calculate new positions and persist
+        // We re-assign positions based on the NEW array order
+        // Note: 'fixed' status should be respected (i.e. if I drag a non-fixed item, it stays non-fixed)
+        // The arrayMove just changes visual order.
+
+        // PERSISTENCE LOGIC
+        if (session) {
+          const updates = newOrder.map((app, index) => ({
+            user_id: session.user.id,
+            app_id: app.id,
+            position: index + 1, // 1-based position
+            fixed: app.fixed || false
+          }));
+
+          // We need to update local state positions too to match
+          const stateUpdated = newOrder.map((app, index) => ({
+            ...app,
+            position: index + 1
+          }));
+
+          // Async Save
+          supabase.from('user_app_layout').upsert(updates, { onConflict: 'user_id, app_id' })
+            .then(({ error }) => {
+              if (error) console.error("Error saving order:", error);
+            });
+
+          return stateUpdated;
+        }
 
         return newOrder;
       });
@@ -335,8 +448,18 @@ function App() {
     }
   };
 
-  // Filter apps based on users_acessers
+  // Filter apps based on users_acessers AND search term
   const filteredApps = apps.filter(app => {
+    // 0. Search Filter
+    if (searchTerm) {
+      const lowerTerm = searchTerm.toLowerCase();
+      const matchesSearch =
+        app.title.toLowerCase().includes(lowerTerm) ||
+        app.description.toLowerCase().includes(lowerTerm);
+
+      if (!matchesSearch) return false;
+    }
+
     // 1. Admins (role >= 6) see ALL apps
     if (userProfile && userProfile.role >= 6) return true;
 
@@ -431,6 +554,8 @@ function App() {
             <Search size={22} className="text-gray-400 group-focus-within:text-blue-600 transition-colors" />
             <input
               type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="O que você está procurando hoje?"
               className="bg-transparent border-none outline-none text-gray-700 placeholder-gray-400/90 text-[16px] font-medium w-full h-11"
             />
@@ -474,6 +599,8 @@ function App() {
                       onEdit={() => handleEditApp(app)}
                       onDelete={() => handleDeleteApp(app.id)}
                       iconNode={getIconNode(app)}
+                      fixed={app.fixed}
+                      onToggleFixed={() => toggleAppFixed(app.id, !!app.fixed)}
                     />
                   ))}
                 </SortableContext>
@@ -510,6 +637,7 @@ function App() {
                       cardColor={app.cardColor}
                       url={app.url}
                       isEditMode={isEditMode}
+                      fixed={app.fixed}
                     />
                   )
                 })()

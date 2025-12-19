@@ -17,3 +17,10 @@ export interface GamaHubApp {
     users_acessers?: string[]; // Array of User UUIDs for access control
 }
 
+export interface UserAppLayout {
+    user_id: string;
+    app_id: number;
+    position: number;
+    fixed: boolean;
+}
+
