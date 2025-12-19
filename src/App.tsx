@@ -484,20 +484,20 @@ function App() {
       // userRole prop removed -- access control for editing is handled by parent visibility check
       />
 
-      {/* Page Title Section */}
-      <div className="mb-6 mt-2 flex items-center justify-between">
-        <div className="flex items-center gap-5">
+      {/* Page Title Section - Responsive Wrapping */}
+      <div className="mb-6 mt-2 flex flex-col md:flex-row items-center justify-between gap-y-4 md:gap-y-0">
+        <div className="flex items-center gap-5 w-full md:w-auto">
           {/* Brand Logo */}
-          <div className="bg-white/80 backdrop-blur-xl p-3 rounded-[20px] shadow-sm border border-white/60">
-            <img src="/logo.png" alt="Gama Hub Logo" className="w-12 h-12 object-contain" />
+          <div className="bg-white/80 backdrop-blur-xl p-3 rounded-[20px] shadow-sm border border-white/60 shrink-0">
+            <img src="/logo.png" alt="Gama Hub Logo" className="w-10 h-10 md:w-12 md:h-12 object-contain" />
           </div>
 
-          <h1 className="text-2xl md:text-3xl xl:text-4xl font-semibold text-gray-900 tracking-tight leading-snug">
-            Gama Hub <span className="text-gray-400 font-light mx-2 hidden sm:inline">–</span> <span className="text-gray-700 block sm:inline text-lg md:text-xl xl:text-2xl mt-1 sm:mt-0">Central de recursos Gama Center</span>
+          <h1 className="text-xl md:text-3xl xl:text-4xl font-semibold text-gray-900 tracking-tight leading-snug">
+            Gama Hub <span className="text-gray-400 font-light mx-1 md:mx-2 hidden sm:inline">–</span> <span className="text-gray-700 block sm:inline text-sm md:text-xl xl:text-2xl mt-0.5 sm:mt-0">Central de recursos</span>
           </h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
           {/* User Profile */}
           {userProfile && (
             <div className="flex items-center gap-3 px-4 py-1.5 bg-white/50 backdrop-blur-sm rounded-full border border-white/60 shadow-sm mr-2">
@@ -543,7 +543,7 @@ function App() {
       {/* Main Grid Layout */}
       <div className="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-8 min-h-[600px]">
         {/* Left Column: Notice Panel - Stacked on top for mobile/tablet/laptop, Side on XL+ */}
-        <div className="xl:col-span-1 self-start xl:h-[520px] min-h-[auto]">
+        <div className="xl:col-span-1 self-start min-h-[auto]">
           <NoticeCard />
         </div>
 
@@ -568,7 +568,8 @@ function App() {
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3 gap-6 auto-rows-fr overflow-y-auto max-h-[65vh] p-2 pb-6 no-scrollbar">
+            {/* Grid Container: Full height on mobile (window scroll), Fixed height scroll on Desktop */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3 gap-4 md:gap-6 auto-rows-fr overflow-y-visible md:overflow-y-auto max-h-none md:max-h-[65vh] p-1 pb-10 md:p-2 md:pb-6 no-scrollbar">
 
               {/* Loading State */}
               {isLoading && (
