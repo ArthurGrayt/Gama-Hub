@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Check, Bot, Mail, Shield, Cloud, Layout, FileText, Calendar, Database, Globe, Lock, MessageCircle, Monitor, Upload } from 'lucide-react';
+import { X, Check, Bot, Mail, Shield, Cloud, Layout, FileText, Calendar, Database, Globe, Lock, MessageCircle, Monitor, Upload, Search, Users } from 'lucide-react';
+import { supabase } from '../services/supabase';
 
 interface AddAppModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (app: any) => void;
     initialData?: any | null; // Optional prop for editing
-    userRole?: number;
 }
 
 const iconOptions = [
@@ -35,17 +35,57 @@ const cardColorOptions = [
     { name: 'bg-pink-50', label: 'Rosa Suave', class: 'bg-pink-50' },
 ];
 
-const AddAppModal: React.FC<AddAppModalProps> = ({ isOpen, onClose, onSave, initialData, userRole = 0 }) => {
+interface User {
+    user_id: string; // Correct column name from public.users usually 'id' or 'user_id', checking App.tsx usage: eq('user_id', userId). Wait, App.tsx uses 'user_id' in queries to 'users' table? Yes: .eq('user_id', userId).
+    username: string;
+    img_url: string;
+    role: number;
+}
+
+const AddAppModal: React.FC<AddAppModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [selectedIcon, setSelectedIcon] = useState('Bot');
     const [selectedCardColor, setSelectedCardColor] = useState('bg-white');
     const [url, setUrl] = useState('');
-    const [minRole, setMinRole] = useState(0);
+
+    // User Access Control State
+    const [users, setUsers] = useState<User[]>([]);
+    const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
     const [file, setFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Fetch users on mount
+    useEffect(() => {
+        const fetchUsers = async () => {
+            setIsLoadingUsers(true);
+            try {
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('user_id, username, img_url, role')
+                    .order('username');
+
+                if (error) throw error;
+                // Filter out admins (role >= 6) as they have implicit access
+                if (data) {
+                    const filteredData = data.filter((u: User) => u.role < 6);
+                    setUsers(filteredData);
+                }
+            } catch (error) {
+                console.error("Error fetching users:", error);
+            } finally {
+                setIsLoadingUsers(false);
+            }
+        };
+
+        if (isOpen) {
+            fetchUsers();
+        }
+    }, [isOpen]);
 
     // Load initial data when modal opens or initialData changes
     useEffect(() => {
@@ -54,7 +94,9 @@ const AddAppModal: React.FC<AddAppModalProps> = ({ isOpen, onClose, onSave, init
             setDescription(initialData.description || '');
             setSelectedCardColor(initialData.cardColor || 'bg-white');
             setUrl(initialData.url || '');
-            setMinRole(initialData.minRole || 0);
+            // Load selected users from existing app data
+            // Ensure we handle case where users_acessers might be null/undefined
+            setSelectedUserIds(initialData.users_acessers || []);
 
             // Check if icon is a URL (custom upload) vs internal name
             if (initialData.iconName && initialData.iconName.startsWith('http')) {
@@ -72,7 +114,7 @@ const AddAppModal: React.FC<AddAppModalProps> = ({ isOpen, onClose, onSave, init
             setSelectedIcon('Bot');
             setSelectedCardColor('bg-white');
             setUrl('');
-            setMinRole(0);
+            setSelectedUserIds([]); // Start empty for new app? User request: "Usuarios não selecionados não devem estar no array". Implicit: Start empty.
 
             setFile(null);
             setPreviewUrl(null);
@@ -93,12 +135,41 @@ const AddAppModal: React.FC<AddAppModalProps> = ({ isOpen, onClose, onSave, init
             statusColor: 'green',
             cardColor: selectedCardColor,
             url: url || undefined,
-            minRole: minRole,
             file: file, // Pass the file object
-            existingIconUrl: (selectedIcon === 'upload' && !file) ? previewUrl : undefined
+            existingIconUrl: (selectedIcon === 'upload' && !file) ? previewUrl : undefined,
+            users_acessers: selectedUserIds
         });
         onClose();
     };
+
+    // User Selection Handlers
+    const toggleUser = (userId: string) => {
+        setSelectedUserIds(prev =>
+            prev.includes(userId)
+                ? prev.filter(id => id !== userId)
+                : [...prev, userId]
+        );
+    };
+
+    const toggleAllUsers = () => {
+        // If all filtered users are selected, deselect them. Otherwise, select all filtered users.
+        const filteredUsers = users.filter(u => u.username.toLowerCase().includes(searchTerm.toLowerCase()));
+        const allFilteredSelected = filteredUsers.every(u => selectedUserIds.includes(u.user_id));
+
+        if (allFilteredSelected) {
+            // Deselect all visible
+            const idsToRemove = new Set(filteredUsers.map(u => u.user_id));
+            setSelectedUserIds(prev => prev.filter(id => !idsToRemove.has(id)));
+        } else {
+            // Select all visible
+            const newIds = filteredUsers.map(u => u.user_id);
+            setSelectedUserIds(prev => Array.from(new Set([...prev, ...newIds])));
+        }
+    };
+
+    const filteredUsers = users.filter(user =>
+        user.username.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -172,25 +243,82 @@ const AddAppModal: React.FC<AddAppModalProps> = ({ isOpen, onClose, onSave, init
                         </div>
 
 
-                        {/* Role Selection - ONLY ADMINS */}
-                        {userRole >= 6 && (
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">Permissão Mínima (Role)</label>
-                                <div className="flex items-center gap-3 bg-amber-50 p-3 rounded-xl border border-amber-100">
-                                    <Shield size={20} className="text-amber-500" />
-                                    <div className="flex-1">
-                                        <p className="text-xs text-amber-700">Somente usuários com nível igual ou superior poderão ver este app.</p>
+
+
+                        {/* User Access Control Section */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                    <Users size={16} />
+                                    Usuários com Acesso
+                                    <span className="text-xs font-normal text-gray-500 ml-1">
+                                        ({selectedUserIds.length} selecionados)
+                                    </span>
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={toggleAllUsers}
+                                    className="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                                >
+                                    {filteredUsers.every(u => selectedUserIds.includes(u.user_id)) && filteredUsers.length > 0 ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                                </button>
+                            </div>
+
+                            <div className="bg-gray-50/50 border border-gray-200 rounded-xl overflow-hidden">
+                                {/* Search Bar */}
+                                <div className="p-3 border-b border-gray-200/50 bg-white/50">
+                                    <div className="relative">
+                                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar usuário..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-none transition-all"
+                                        />
                                     </div>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={minRole}
-                                        onChange={(e) => setMinRole(parseInt(e.target.value) || 0)}
-                                        className="w-20 px-3 py-2 rounded-lg bg-white border border-gray-200 focus:border-amber-500 outline-none text-center font-medium"
-                                    />
+                                </div>
+
+                                {/* Users List */}
+                                <div className="max-h-[200px] overflow-y-auto custom-scrollbar p-1">
+                                    {isLoadingUsers ? (
+                                        <div className="p-4 text-center text-sm text-gray-500">Carregando usuários...</div>
+                                    ) : filteredUsers.length === 0 ? (
+                                        <div className="p-4 text-center text-sm text-gray-500">Nenhum usuário encontrado.</div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 gap-1">
+                                            {filteredUsers.map(user => (
+                                                <div
+                                                    key={user.user_id}
+                                                    onClick={() => toggleUser(user.user_id)}
+                                                    className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all border ${selectedUserIds.includes(user.user_id)
+                                                        ? 'bg-blue-50 border-blue-200'
+                                                        : 'hover:bg-white border-transparent'
+                                                        }`}
+                                                >
+                                                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${selectedUserIds.includes(user.user_id)
+                                                        ? 'bg-blue-600 border-blue-600'
+                                                        : 'bg-white border-gray-300'
+                                                        }`}>
+                                                        {selectedUserIds.includes(user.user_id) && <Check size={12} className="text-white" />}
+                                                    </div>
+
+                                                    {user.img_url ? (
+                                                        <img src={user.img_url} alt={user.username} className="w-8 h-8 rounded-full object-cover bg-gray-200" />
+                                                    ) : (
+                                                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 text-xs font-bold">
+                                                            {user.username.charAt(0).toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                    <span className="text-sm text-gray-700 font-medium truncate">{user.username}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        )}
+
+                        </div>
 
                         {/* Icon Selection */}
                         <div className="space-y-2">

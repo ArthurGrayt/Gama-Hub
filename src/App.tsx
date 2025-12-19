@@ -37,7 +37,7 @@ interface AppData {
   statusColor: 'green' | 'blue' | 'yellow' | 'gray';
   cardColor?: string;
   url?: string;
-  minRole?: number;
+  users_acessers?: string[];
 }
 
 // Icon mapping registry
@@ -101,8 +101,8 @@ function App() {
   const initializeData = async (userId: string) => {
     // 1. Fetch User Profile
     await fetchUserProfile(userId);
-    // 2. Fetch Apps and Dashboard
-    await fetchAppsAndDashboard(userId);
+    // 2. Fetch Apps
+    await fetchApps();
     setIsLoading(false);
   };
 
@@ -152,18 +152,8 @@ function App() {
     }
   };
 
-  const fetchAppsAndDashboard = async (userId: string) => {
+  const fetchApps = async () => {
     try {
-      // 1. Get User Role (Required for permission check)
-      const { data: userData } = await supabase
-        .from('users')
-        .select('role')
-        .eq('user_id', userId)
-        .single();
-
-      const userRole = userData?.role || 0;
-
-      // 2. Fetch ALL apps details (we need them to render)
       const { data: appsData, error: appsError } = await supabase
         .from('gamahub_apps')
         .select('*')
@@ -180,76 +170,16 @@ function App() {
           iconName: item.icone,
           statusColor: 'green',
           cardColor: item.cor,
+
           url: item.url_app,
-          minRole: item.min_role || 0
+          users_acessers: item.users_acessers || []
         }));
       }
 
-      // 3. Check User Dashboard
-      const { data: dashboardData, error: dashboardError } = await supabase
-        .from('user_dashboard')
-        .select('apps_visiveis')
-        .eq('user_id', userId)
-        .single();
-
-      let visibleIds: number[] = [];
-
-      // PASSO 4 / PASSO 3 logic
-      if (!dashboardError && dashboardData) {
-        // CASE: Record EXISTS -> Use existing
-        visibleIds = dashboardData.apps_visiveis || [];
-      } else {
-        // CASE: Record MISSING -> First Access Initialization
-        // Calculate allowed apps based on role
-        const allowedApps = mappedApps.filter(app => (app.minRole || 0) <= userRole);
-        visibleIds = allowedApps.map(app => app.id);
-
-        // Create record in user_dashboard
-        try {
-          await supabase
-            .from('user_dashboard')
-            .upsert({
-              user_id: userId,
-              apps_visiveis: visibleIds
-            }, { onConflict: 'user_id' });
-        } catch (err) {
-          console.error("Error creating initial dashboard:", err);
-        }
-      }
-
-      // 4. Render ONLY visible apps, in order
-      const finalApps: AppData[] = [];
-      const appsMap = new Map(mappedApps.map(app => [app.id, app]));
-
-      visibleIds.forEach(id => {
-        const app = appsMap.get(id);
-        if (app) {
-          finalApps.push(app);
-        }
-      });
-
-      setApps(finalApps);
+      setApps(mappedApps);
 
     } catch (error) {
-      console.error('Error in fetchAppsAndDashboard:', error);
-    }
-  };
-
-  const saveUserDashboard = async (newOrder: AppData[]) => {
-    if (!session) return;
-    const appIds = newOrder.map(app => app.id);
-
-    try {
-      const { error } = await supabase
-        .from('user_dashboard')
-        .upsert({
-          user_id: session.user.id,
-          apps_visiveis: appIds,
-        }, { onConflict: 'user_id' });
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error saving dashboard order:', error);
+      console.error('Error in fetchApps:', error);
     }
   };
 
@@ -269,8 +199,8 @@ function App() {
         const newIndex = items.findIndex((item) => item.id === over?.id);
         const newOrder = arrayMove(items, oldIndex, newIndex);
 
-        // Save to backend
-        saveUserDashboard(newOrder);
+        // Save to backend - DISABLED (Removed user_dashboard)
+        // saveUserDashboard(newOrder);
 
         return newOrder;
       });
@@ -316,8 +246,9 @@ function App() {
         descricao: appData.description,
         icone: iconToSave,
         cor: appData.cardColor || 'bg-white',
+
         url_app: appData.url || '',
-        min_role: appData.minRole || 0
+        users_acessers: appData.users_acessers
       };
 
       if (appData.id) {
@@ -340,7 +271,7 @@ function App() {
         if (error) throw error;
       }
 
-      if (session) fetchAppsAndDashboard(session.user.id);
+      if (session) fetchApps();
 
     } catch (error) {
       console.error('Error saving app:', error);
@@ -362,7 +293,7 @@ function App() {
           .eq('id', id);
 
         if (error) throw error;
-        if (session) fetchAppsAndDashboard(session.user.id);
+        if (session) fetchApps();
       } catch (error) {
         console.error('Error deleting app:', error);
         alert('Erro ao excluir o app. Tente novamente.');
@@ -404,8 +335,16 @@ function App() {
     }
   };
 
-  // Filter apps based on min_role - DISABLED as column missing
-  const filteredApps = apps; // apps.filter...
+  // Filter apps based on users_acessers
+  const filteredApps = apps.filter(app => {
+    // 1. Admins (role >= 6) see ALL apps
+    if (userProfile && userProfile.role >= 6) return true;
+
+    // 2. Regular users see only apps where they are in users_acessers
+    if (session?.user?.id && app.users_acessers?.includes(session.user.id)) return true;
+
+    return false;
+  });
 
   // If not logged in, show Login Page
   if (!session) {
@@ -419,7 +358,7 @@ function App() {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveApp}
         initialData={editingApp}
-        userRole={userProfile?.role || 0}
+      // userRole prop removed -- access control for editing is handled by parent visibility check
       />
 
       {/* Page Title Section */}
