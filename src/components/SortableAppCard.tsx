@@ -40,7 +40,7 @@ export function SortableAppCard({ id, app, isEditMode, onEdit, onDelete, iconNod
         transition,
         zIndex: isDragging ? 10 : 1,
         opacity: isDragging ? 0.5 : 1,
-        touchAction: 'none' // Important for touch devices
+        touchAction: 'manipulation' // Allow scrolling, we use delay for drag
     };
 
     return (
