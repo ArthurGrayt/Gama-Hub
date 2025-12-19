@@ -485,19 +485,21 @@ function App() {
       />
 
       {/* Page Title Section - Responsive Wrapping */}
-      <div className="mb-6 mt-2 flex flex-col md:flex-row items-center justify-between gap-y-4 md:gap-y-0">
-        <div className="flex items-center gap-5 w-full md:w-auto">
+      <div className="mb-6 mt-2 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+        <div className="flex items-center gap-4 w-full lg:w-auto">
           {/* Brand Logo */}
           <div className="bg-white/80 backdrop-blur-xl p-3 rounded-[20px] shadow-sm border border-white/60 shrink-0">
             <img src="/logo.png" alt="Gama Hub Logo" className="w-10 h-10 md:w-12 md:h-12 object-contain" />
           </div>
 
-          <h1 className="text-xl md:text-3xl xl:text-4xl font-semibold text-gray-900 tracking-tight leading-snug">
-            Gama Hub <span className="text-gray-400 font-light mx-1 md:mx-2 hidden sm:inline">–</span> <span className="text-gray-700 block sm:inline text-sm md:text-xl xl:text-2xl mt-0.5 sm:mt-0">Central de recursos</span>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-gray-900 tracking-tight leading-snug flex flex-wrap items-center gap-x-2">
+            <span>Gama Hub</span>
+            <span className="text-gray-400 font-light hidden sm:inline">–</span>
+            <span className="text-gray-700 font-normal text-base sm:text-lg md:text-xl block sm:inline">Central de recursos</span>
           </h1>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+        <div className="flex items-center gap-2 sm:gap-3 w-full lg:w-auto justify-end">
           {/* User Profile */}
           {userProfile && (
             <div className="flex items-center gap-3 px-4 py-1.5 bg-white/50 backdrop-blur-sm rounded-full border border-white/60 shadow-sm mr-2">
@@ -522,10 +524,11 @@ function App() {
           {userProfile && userProfile.role >= 6 && (
             <button
               onClick={() => setIsEditMode(!isEditMode)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition-all shadow-sm border ${isEditMode ? 'bg-gray-900 text-white border-gray-900' : 'bg-white/50 text-gray-600 border-white/60 hover:bg-white hover:shadow-md'}`}
+              className={`flex items-center justify-center gap-2 px-4 sm:px-5 rounded-full font-medium transition-all shadow-sm border h-[46px] whitespace-nowrap ${isEditMode ? 'bg-gray-900 text-white border-gray-900' : 'bg-white/50 text-gray-600 border-white/60 hover:bg-white hover:shadow-md'}`}
             >
               <Pencil size={18} />
-              {isEditMode ? 'Concluir Edição' : 'Editar Apps'}
+              <span className="hidden sm:inline">{isEditMode ? 'Concluir' : 'Editar Apps'}</span>
+              <span className="sm:hidden">{isEditMode ? 'OK' : 'Editar'}</span>
             </button>
           )}
 
@@ -568,8 +571,8 @@ function App() {
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            {/* Grid Container: Full height on mobile (window scroll), Fixed height scroll on Desktop */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3 gap-4 md:gap-6 auto-rows-fr overflow-y-visible md:overflow-y-auto max-h-none md:max-h-[65vh] p-1 pb-10 md:p-2 md:pb-6 no-scrollbar">
+            {/* Grid Container: Optimized for mobile/tablet */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-4 sm:gap-6 auto-rows-fr overflow-y-visible md:overflow-y-auto max-h-none md:max-h-[65vh] p-1 pb-10 md:p-2 md:pb-6 no-scrollbar">
 
               {/* Loading State */}
               {isLoading && (
