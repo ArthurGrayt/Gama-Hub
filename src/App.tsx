@@ -582,7 +582,7 @@ function App() {
             onDragEnd={handleDragEnd}
           >
             {/* Grid Container: Optimized for mobile/tablet */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-4 sm:gap-6 auto-rows-fr overflow-y-visible md:overflow-y-auto max-h-none md:max-h-[65vh] p-1 pb-10 md:p-2 md:pb-6 no-scrollbar">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-4 sm:gap-6 overflow-y-visible md:overflow-y-auto max-h-none md:max-h-[65vh] p-1 pb-10 md:p-2 md:pb-6 no-scrollbar">
 
               {/* Loading State */}
               {isLoading && (
